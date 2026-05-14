@@ -2,6 +2,9 @@
 node_modules/
 .pnpm-store/
 
+# lockfile (not committed in this repo — CI/Vercel use `npm install`)
+package-lock.json
+
 # build outputs
 .next/
 out/
