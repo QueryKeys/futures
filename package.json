@@ -1,0 +1,27 @@
+{
+  "name": "polymarket-il",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Polymarket intelligence platform for Israeli traders (Hebrew/RTL).",
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "web",
+    "worker",
+    "shared"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "dev:web": "npm -w @poly-il/web run dev",
+    "dev:worker": "npm -w @poly-il/worker run dev",
+    "deploy:web": "npm -w @poly-il/web run deploy",
+    "deploy:worker": "npm -w @poly-il/worker run deploy"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
+  }
+}
