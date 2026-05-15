@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# lockfile (not committed in this repo — CI/Vercel use `npm install`)
+package-lock.json
+
+# build outputs
+.next/
+out/
+dist/
+.wrangler/
+.open-next/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs / OS
+*.log
+.DS_Store
+Thumbs.db
+
+# editors
+.vscode/
+.idea/
+
+# turbo / nx caches (in case added later)
+.turbo/
+.cache/
+
+# coverage
+coverage/

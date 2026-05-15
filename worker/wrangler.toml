@@ -1,0 +1,29 @@
+name = "polymarket-il-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Observability — used to verify cache HIT/MISS logs in production.
+[observability]
+enabled = true
+
+# ── KV namespaces ──────────────────────────────────────────────────────────
+# Create with:
+#   wrangler kv:namespace create POLY_CACHE
+#   wrangler kv:namespace create POLY_CACHE --preview
+# then paste IDs below.
+[[kv_namespaces]]
+binding = "POLY_CACHE"
+id = "REPLACE_WITH_KV_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_ID"
+
+# ── Vars (non-secrets) ────────────────────────────────────────────────────
+[vars]
+GAMMA_BASE = "https://gamma-api.polymarket.com"
+DATA_BASE  = "https://data-api.polymarket.com"
+# Comma-separated allow-list. "*" allows all origins (dev only).
+ALLOWED_ORIGINS = "*"
+
+# Secrets — set via `wrangler secret put NAME`:
+#   ANTHROPIC_API_KEY
+#   VAPID_PRIVATE_KEY
