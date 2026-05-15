@@ -1,121 +1,12 @@
-import { useEffect, useState } from 'react';
 import { Crosshair, RefreshCw, Info } from 'lucide-react';
 import { TraderCard, TraderCardSkeleton } from '../components/TraderCard.jsx';
-import { getRecentTrades, getPositions } from '../lib/polymarket.js';
-import { normalizeTrader } from '../lib/enrichers.js';
-
-const WHALE_MIN_USD = 5_000;
-const TOP_N = 18;
+import { useSharks } from '../lib/useSharks.js';
 
 export function SharksRadar() {
-  const [traders, setTraders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    (async () => {
-      try {
-        // Step 1: pull whale-sized trades from the platform feed.
-        // These are individual fills with the wallet metadata embedded.
-        const trades = await getRecentTrades({ limit: 500, minSize: WHALE_MIN_USD });
-
-        // Step 2: collapse trades by wallet, capturing the most recent
-        // position metadata for the card body.
-        const byUser = new Map();
-        const now = Date.now();
-
-        for (const t of trades) {
-          const u = t.proxyWallet;
-          if (!u) continue;
-          const usd = Number(t.size ?? 0) * Number(t.price ?? 0);
-          if (usd < WHALE_MIN_USD) continue;
-          const tsMs = (Number(t.timestamp) || 0) * 1000;
-          const hoursAgo = tsMs ? (now - tsMs) / 3_600_000 : Infinity;
-
-          const cur = byUser.get(u) ?? {
-            proxyWallet: u,
-            name: t.name || t.pseudonym || null,
-            profileImage: t.profileImage || null,
-            volume: 0,
-            trades: 0,
-            recentEntryUsd: 0,
-            recentEntryHoursAgo: Infinity,
-            lastPositionTitle: null,
-            lastPositionSide: null,
-            lastEntryPrice: 0,
-            lastEntrySize: 0,
-          };
-          cur.volume += usd;
-          cur.trades += 1;
-          if (hoursAgo < cur.recentEntryHoursAgo) {
-            cur.recentEntryHoursAgo = hoursAgo;
-            cur.recentEntryUsd = usd;
-            cur.lastPositionTitle = t.title ?? null;
-            cur.lastPositionSide = t.outcome === 'Yes' ? 'yes' : 'no';
-            cur.lastEntryPrice = Number(t.price ?? 0);
-            cur.lastEntrySize = usd;
-          }
-          byUser.set(u, cur);
-        }
-
-        const topWallets = [...byUser.values()]
-          .sort((a, b) => b.volume - a.volume)
-          .slice(0, TOP_N);
-
-        // Step 3: fetch real PnL for each top wallet via /positions. We
-        // surface two numbers — `pnl` (current open-position PnL, the live
-        // signal) and `lifetimeProfit` (cashPnl + realized) used to award
-        // the "מחזיר חזק" tag.
-        const enriched = await Promise.all(
-          topWallets.map(async (w) => {
-            try {
-              const positions = await getPositions(w.proxyWallet, { limit: 50 });
-              const pnl = positions.reduce((acc, p) => acc + Number(p.cashPnl ?? 0), 0);
-              const realized = positions.reduce(
-                (acc, p) => acc + Number(p.realizedPnl ?? 0),
-                0
-              );
-              const initial = positions.reduce(
-                (acc, p) => acc + Number(p.initialValue ?? 0),
-                0
-              );
-              const pnlPct = initial > 0 ? pnl / initial : 0;
-              return {
-                ...w,
-                pnl,
-                pnlPct,
-                lifetimeProfit: pnl + realized,
-                txCount: w.trades,
-              };
-            } catch {
-              return { ...w, pnl: 0, pnlPct: 0, lifetimeProfit: 0, txCount: w.trades };
-            }
-          })
-        );
-
-        if (cancelled) return;
-        setTraders(
-          enriched
-            .sort((a, b) => b.pnl - a.pnl)
-            .map(normalizeTrader)
-        );
-      } catch (e) {
-        if (cancelled) return;
-        setError(e);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
+  const { traders, loading, error, refresh, lastUpdated } = useSharks({
+    minSize: 5000,
+    n: 18,
+  });
 
   return (
     <div className="min-h-screen">
@@ -132,7 +23,7 @@ export function SharksRadar() {
           </div>
           <button
             type="button"
-            onClick={() => setRefreshKey((k) => k + 1)}
+            onClick={refresh}
             className="rounded-xl border border-border bg-bg-card p-2.5 text-text-muted hover:text-text transition-colors"
             aria-label="רענן"
           >
@@ -144,6 +35,13 @@ export function SharksRadar() {
           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-text-dim" />
           <p>
             הנתונים מצטברים מעסקאות שגודלן מעל <bdi className="num">$5,000</bdi>, מועשרים בנתוני פוזיציה אמיתיים מ-Polymarket Data API.
+            {lastUpdated && (
+              <>
+                {' '}
+                · עדכון אחרון:{' '}
+                <bdi className="num">{new Date(lastUpdated).toLocaleTimeString('he-IL')}</bdi>
+              </>
+            )}
           </p>
         </div>
 

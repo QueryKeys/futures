@@ -24,6 +24,7 @@ export function MarketCard({
   probability,
   daysLeft,
   category,
+  categoryLabel,
   side = 'yes',
   isSmartMoney = false,
   liquidity,
@@ -34,6 +35,7 @@ export function MarketCard({
   onClick,
 }) {
   const cat = CATEGORY_BY_SLUG[category] ?? CATEGORY_BY_SLUG.all;
+  const label = categoryLabel || cat.label;
   const probPct = probability != null ? Math.round(probability * 100) : null;
   const sideIsYes = side === 'yes';
 
@@ -64,7 +66,7 @@ export function MarketCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] uppercase tracking-wider text-text-muted px-1.5 py-0.5 rounded bg-bg-elevated">
-              {cat.label}
+              {label}
             </span>
             {daysLeft != null && (
               <span className="flex items-center gap-1 text-[11px] text-text-dim">

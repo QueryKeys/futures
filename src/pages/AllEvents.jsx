@@ -37,7 +37,7 @@ const CATEGORY_OPTIONS = CATEGORIES.filter((c) => c.slug !== 'all').map((c) => (
 }));
 
 export function AllEvents() {
-  const { data: markets, loading } = useMarkets({ limit: 500 });
+  const { data: markets, loading, totalMarkets, lastUpdated } = useMarkets();
   const { isFavorite, toggle } = useFavorites();
   const credits = useAiCredits();
 
@@ -91,7 +91,8 @@ export function AllEvents() {
             <div className="min-w-0">
               <p className="text-sm text-text font-medium line-clamp-1">{row.original.question}</p>
               <p className="text-[11px] text-text-dim mt-0.5">
-                {CATEGORY_BY_SLUG[row.original.category]?.label}
+                {row.original.categoryLabel ||
+                  CATEGORY_BY_SLUG[row.original.category]?.label}
               </p>
             </div>
           </div>
@@ -194,7 +195,14 @@ export function AllEvents() {
             <h1 className="text-2xl md:text-3xl font-bold text-text">כל השווקים</h1>
             <p className="text-sm text-text-muted mt-1">
               <bdi className="num">{fmtInt(visibleCount)}</bdi> מתוך{' '}
-              <bdi className="num">{fmtInt(markets.length)}</bdi> שווקים פעילים מובילים
+              <bdi className="num">{fmtInt(totalMarkets ?? markets.length)}</bdi> שווקים
+              {lastUpdated && (
+                <span className="text-text-dim">
+                  {' '}
+                  · עודכן ב-
+                  <bdi className="num">{new Date(lastUpdated).toLocaleTimeString('he-IL')}</bdi>
+                </span>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-card px-3 py-2">

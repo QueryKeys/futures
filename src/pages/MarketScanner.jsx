@@ -97,6 +97,7 @@ export function MarketScanner() {
                   probability={m.probability}
                   daysLeft={m.daysLeft}
                   category={m.category}
+                  categoryLabel={m.categoryLabel}
                   side={m.side}
                   isSmartMoney={m.isSmartMoney}
                   liquidity={m.liquidity}
