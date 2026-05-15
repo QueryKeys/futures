@@ -2,20 +2,8 @@ import type { Env } from "./env.js";
 import { corsHeaders, handlePreflight } from "./lib/cors.js";
 import { checkIpRateLimit, rateLimitHeaders } from "./lib/rateLimit.js";
 import { handleMarkets } from "./handlers/markets.js";
-
-/**
- * Polymarket-IL API Worker.
- *
- * Step 1 surface area:
- *   GET  /              → liveness
- *   GET  /healthz       → JSON status
- *   GET  /api/markets   → cached gamma /markets, normalized
- *
- * Cross-cutting:
- *   - CORS (allow-list driven by env.ALLOWED_ORIGINS)
- *   - Per-IP soft rate limit (60 req/min, KV bucketed)
- *   - Single-flight + KV cache + stale-while-revalidate + 429 backoff
- */
+import { handleEvents } from "./handlers/events.js";
+import { handleSharks } from "./handlers/sharks.js";
 
 export default {
   async fetch(
@@ -29,7 +17,6 @@ export default {
     const cors = corsHeaders(req, env);
     const url = new URL(req.url);
 
-    // ── Rate limit (per IP) ────────────────────────────────────────────────
     if (url.pathname.startsWith("/api/")) {
       const ip =
         req.headers.get("CF-Connecting-IP") ??
@@ -40,7 +27,6 @@ export default {
         return new Response(
           JSON.stringify({
             error: "rate_limited",
-            message: "Too many requests. Try again shortly.",
             resetSeconds: rl.resetSeconds,
           }),
           {
@@ -57,23 +43,20 @@ export default {
     }
 
     try {
-      // ── Routes ──────────────────────────────────────────────────────────
-      if (url.pathname === "/" && req.method === "GET") {
+      if (url.pathname === "/" && req.method === "GET")
         return text("polymarket-il-api: ok", cors);
-      }
 
-      if (url.pathname === "/healthz" && req.method === "GET") {
-        return json(
-          { ok: true, time: new Date().toISOString() },
-          200,
-          cors,
-        );
-      }
+      if (url.pathname === "/healthz" && req.method === "GET")
+        return json({ ok: true, time: new Date().toISOString() }, 200, cors);
 
-      if (url.pathname === "/api/markets" && req.method === "GET") {
-        const res = await handleMarkets(req, env, ctx);
-        return withHeaders(res, cors);
-      }
+      if (url.pathname === "/api/markets" && req.method === "GET")
+        return withHeaders(await handleMarkets(req, env, ctx), cors);
+
+      if (url.pathname === "/api/events" && req.method === "GET")
+        return withHeaders(await handleEvents(req, env, ctx), cors);
+
+      if (url.pathname === "/api/sharks" && req.method === "GET")
+        return withHeaders(await handleSharks(req, env, ctx), cors);
 
       return json({ error: "not_found", path: url.pathname }, 404, cors);
     } catch (err) {
@@ -97,8 +80,6 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
 function json(
   body: unknown,
   status: number,
@@ -106,10 +87,7 @@ function json(
 ): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...extra,
-    },
+    headers: { "Content-Type": "application/json; charset=utf-8", ...extra },
   });
 }
 
@@ -120,7 +98,10 @@ function text(body: string, extra: Record<string, string>): Response {
   });
 }
 
-function withHeaders(res: Response, extra: Record<string, string>): Response {
+function withHeaders(
+  res: Response,
+  extra: Record<string, string>,
+): Response {
   const h = new Headers(res.headers);
   for (const [k, v] of Object.entries(extra)) h.set(k, v);
   return new Response(res.body, {
