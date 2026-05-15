@@ -67,13 +67,19 @@ export function SharksRadar() {
           .sort((a, b) => b.volume - a.volume)
           .slice(0, TOP_N);
 
-        // Step 3: fetch real PnL for each top wallet via /positions. The
-        // sum of cashPnl across open positions is a reasonable 7d proxy.
+        // Step 3: fetch real PnL for each top wallet via /positions. We
+        // surface two numbers — `pnl` (current open-position PnL, the live
+        // signal) and `lifetimeProfit` (cashPnl + realized) used to award
+        // the "מחזיר חזק" tag.
         const enriched = await Promise.all(
           topWallets.map(async (w) => {
             try {
               const positions = await getPositions(w.proxyWallet, { limit: 50 });
               const pnl = positions.reduce((acc, p) => acc + Number(p.cashPnl ?? 0), 0);
+              const realized = positions.reduce(
+                (acc, p) => acc + Number(p.realizedPnl ?? 0),
+                0
+              );
               const initial = positions.reduce(
                 (acc, p) => acc + Number(p.initialValue ?? 0),
                 0
@@ -83,7 +89,7 @@ export function SharksRadar() {
                 ...w,
                 pnl,
                 pnlPct,
-                lifetimeProfit: pnl, // best available without a separate endpoint
+                lifetimeProfit: pnl + realized,
                 txCount: w.trades,
               };
             } catch {
@@ -121,7 +127,7 @@ export function SharksRadar() {
               <h1 className="text-2xl md:text-3xl font-bold text-text">ראדאר לוויתנים</h1>
             </div>
             <p className="text-sm text-text-muted">
-              סוחרים מובילים לפי הימור גבוה ב-7 ימים האחרונים. תגיות אוטומטיות מסמנות מהלך פנימי, לוויתן מנצח ומחזיר חזק.
+              סוחרים מובילים לפי פעילות לוויתנים בזמן אמת. רווח מחושב מסכום ה-cashPnl על פוזיציות פתוחות ב-Polymarket. תגיות אוטומטיות מסמנות מהלך פנימי, לוויתן מנצח ומחזיר חזק.
             </p>
           </div>
           <button

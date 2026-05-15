@@ -1,11 +1,17 @@
-// Centralized markets fetching hook. Pulls the active set once, normalizes,
-// and exposes loading / error / refresh.
+// Joint hook — loads active markets and whale trades in parallel, then
+// enriches each market with the live whale signal (volume, count,
+// isSmartMoney). One stop for every page that needs market data.
 import { useEffect, useState, useCallback } from 'react';
-import { getMarkets } from './polymarket.js';
-import { normalizeMarket } from './enrichers.js';
+import { getMarkets, getWhaleTrades } from './polymarket.js';
+import {
+  normalizeMarket,
+  aggregateWhalesByMarket,
+  enrichWithWhales,
+} from './enrichers.js';
 
-export function useMarkets({ limit = 500 } = {}) {
+export function useMarkets({ limit = 500, whaleMin = 10_000, whaleLimit = 500 } = {}) {
   const [data, setData] = useState([]);
+  const [whales, setWhales] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -14,9 +20,18 @@ export function useMarkets({ limit = 500 } = {}) {
       setLoading(true);
       setError(null);
       try {
-        const raw = await getMarkets({ limit });
+        // Fire both requests in parallel — the Vite dev proxy and the
+        // 60s TTL cache keep this cheap on subsequent navigations.
+        const [rawMarkets, rawTrades] = await Promise.all([
+          getMarkets({ limit }),
+          getWhaleTrades({ minSize: whaleMin, limit: whaleLimit }).catch(() => []),
+        ]);
         if (signal?.aborted) return;
-        setData(raw.map(normalizeMarket));
+        const whaleMap = aggregateWhalesByMarket(rawTrades);
+        const normalized = rawMarkets.map(normalizeMarket);
+        const enriched = enrichWithWhales(normalized, whaleMap);
+        setWhales(whaleMap);
+        setData(enriched);
       } catch (e) {
         if (signal?.aborted) return;
         setError(e);
@@ -24,7 +39,7 @@ export function useMarkets({ limit = 500 } = {}) {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [limit]
+    [limit, whaleMin, whaleLimit]
   );
 
   useEffect(() => {
@@ -33,5 +48,5 @@ export function useMarkets({ limit = 500 } = {}) {
     return () => ctrl.abort();
   }, [load]);
 
-  return { data, loading, error, refresh: () => load() };
+  return { data, whales, loading, error, refresh: () => load() };
 }

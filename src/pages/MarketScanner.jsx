@@ -3,7 +3,7 @@ import { StrategyCard } from '../components/StrategyCard.jsx';
 import { MarketCard, MarketCardSkeleton } from '../components/MarketCard.jsx';
 import { useMarkets } from '../lib/useMarkets.js';
 import { useFavorites } from '../lib/useFavorites.js';
-import { STRATEGIES, applyStrategy, fmtPercent } from '../lib/enrichers.js';
+import { STRATEGIES, applyStrategy, fmtPercent, fmtUsd } from '../lib/enrichers.js';
 
 export function MarketScanner() {
   const [active, setActive] = useState('smart_money');
@@ -65,7 +65,11 @@ export function MarketScanner() {
               </p>
               {active === 'smart_money' && filtered.length > 0 && (
                 <p className="text-xs text-smart mt-1">
-                  תשואה שנתית ממוצעת:{' '}
+                  נפח לוויתנים:{' '}
+                  <bdi className="num">
+                    {fmtUsd(filtered.reduce((a, m) => a + (m.whaleVolume ?? 0), 0))}
+                  </bdi>{' '}
+                  · תשואה שנתית ממוצעת:{' '}
                   <bdi className="num">
                     {fmtPercent(
                       filtered
@@ -94,7 +98,7 @@ export function MarketScanner() {
                   daysLeft={m.daysLeft}
                   category={m.category}
                   side={m.side}
-                  isSmartMoney={active === 'smart_money'}
+                  isSmartMoney={m.isSmartMoney}
                   liquidity={m.liquidity}
                   volume24={m.volume24}
                   image={m.image}

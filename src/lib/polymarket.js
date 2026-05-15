@@ -150,6 +150,16 @@ export async function getMarketTrades(conditionId, opts = {}) {
 }
 
 /**
+ * Whale trades convenience wrapper — applies the CASH-size filter and
+ * returns the raw trade list. Each trade carries `conditionId`, `proxyWallet`,
+ * `size`, `price`, `outcome`, `timestamp`, plus the wallet's profile fields
+ * (name, pseudonym, profileImage).
+ */
+export async function getWhaleTrades({ minSize = 10_000, limit = 500 } = {}) {
+  return getRecentTrades({ limit, minSize });
+}
+
+/**
  * Latest trades across the platform. Pass `minSize` (USD) to surface
  * whale-sized fills only — the API supports filterType=CASH + filterAmount.
  */

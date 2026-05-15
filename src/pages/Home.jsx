@@ -3,7 +3,6 @@ import { CategoryTabs } from '../components/CategoryTabs.jsx';
 import { MarketCard, MarketCardSkeleton } from '../components/MarketCard.jsx';
 import { useMarkets } from '../lib/useMarkets.js';
 import { useFavorites } from '../lib/useFavorites.js';
-import { applyStrategy } from '../lib/enrichers.js';
 import { CATEGORIES } from '../config/categories.js';
 
 export function Home() {
@@ -15,13 +14,6 @@ export function Home() {
     const out = { all: markets.length };
     for (const m of markets) out[m.category] = (out[m.category] ?? 0) + 1;
     return out;
-  }, [markets]);
-
-  const smartMoneyIds = useMemo(() => {
-    // Mark the highest-conviction smart-money picks (top by annualized return
-    // among the strategy matches) so the pink ribbon appears sparingly.
-    const matches = applyStrategy(markets, 'smart_money').slice(0, 24);
-    return new Set(matches.map((m) => m.id));
   }, [markets]);
 
   const visible = useMemo(() => {
@@ -62,7 +54,7 @@ export function Home() {
                   daysLeft={m.daysLeft}
                   category={m.category}
                   side={m.side}
-                  isSmartMoney={smartMoneyIds.has(m.id)}
+                  isSmartMoney={m.isSmartMoney}
                   liquidity={m.liquidity}
                   volume24={m.volume24}
                   image={m.image}

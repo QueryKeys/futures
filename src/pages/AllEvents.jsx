@@ -14,9 +14,6 @@ import { CATEGORIES, CATEGORY_BY_SLUG } from '../config/categories.js';
 import { fmtPercent, fmtUsd, fmtDays, fmtInt } from '../lib/enrichers.js';
 import { cn } from '../lib/cn.js';
 
-// 20,098 — the published total market count for Polymarket as of build.
-const PLATFORM_TOTAL = 20098;
-
 const LIQUIDITY_FILTERS = [
   { slug: 'lt10', label: 'מתחת ל-$10k', test: (m) => m.liquidity < 10_000 },
   { slug: '10to50', label: '$10k-$50k', test: (m) => m.liquidity >= 10_000 && m.liquidity < 50_000 },
@@ -197,7 +194,7 @@ export function AllEvents() {
             <h1 className="text-2xl md:text-3xl font-bold text-text">כל השווקים</h1>
             <p className="text-sm text-text-muted mt-1">
               <bdi className="num">{fmtInt(visibleCount)}</bdi> מתוך{' '}
-              <bdi className="num">{fmtInt(PLATFORM_TOTAL)}</bdi> שווקים
+              <bdi className="num">{fmtInt(markets.length)}</bdi> שווקים פעילים מובילים
             </p>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-card px-3 py-2">

@@ -91,6 +91,84 @@ export function isSmartMoneyPosition(position) {
   return usd > SMART_MONEY_MIN_USD && prob < SMART_MONEY_MAX_PROB;
 }
 
+/**
+ * Roll up raw whale trades (from /trades with filterAmount) into a per-market
+ * signal — keyed by conditionId so it joins cleanly with /markets payloads.
+ *
+ * Returned shape per market:
+ *   { volume, whaleCount, lastPrice, lastSide, hoursAgo, sample: [trade,…] }
+ */
+export function aggregateWhalesByMarket(trades) {
+  const now = Date.now();
+  const map = new Map();
+  for (const t of trades) {
+    const cid = t.conditionId;
+    if (!cid) continue;
+    const usd = Number(t.size ?? 0) * Number(t.price ?? 0);
+    if (!Number.isFinite(usd) || usd < SMART_MONEY_MIN_USD) continue;
+    const tsMs = (Number(t.timestamp) || 0) * 1000;
+    const hoursAgo = tsMs ? (now - tsMs) / 3_600_000 : Infinity;
+    const cur = map.get(cid) ?? {
+      volume: 0,
+      whales: new Set(),
+      lastPrice: null,
+      lastSide: null,
+      hoursAgo: Infinity,
+      sample: [],
+    };
+    cur.volume += usd;
+    cur.whales.add(t.proxyWallet);
+    if (hoursAgo < cur.hoursAgo) {
+      cur.hoursAgo = hoursAgo;
+      cur.lastPrice = Number(t.price);
+      cur.lastSide = t.outcome === 'Yes' ? 'yes' : 'no';
+    }
+    if (cur.sample.length < 5) cur.sample.push(t);
+    map.set(cid, cur);
+  }
+  // Materialize for consumption (Set → count, keep order).
+  const out = new Map();
+  for (const [cid, v] of map) {
+    out.set(cid, {
+      volume: v.volume,
+      whaleCount: v.whales.size,
+      lastPrice: v.lastPrice,
+      lastSide: v.lastSide,
+      hoursAgo: v.hoursAgo,
+      sample: v.sample,
+    });
+  }
+  return out;
+}
+
+/**
+ * Apply a whale signal map (from aggregateWhalesByMarket) onto an array of
+ * already-normalized markets. Adds `whaleVolume`, `whaleCount`, and an
+ * `isSmartMoney` boolean (whales active AND prob < 80% — i.e. whales
+ * betting *against* consensus on this market).
+ */
+export function enrichWithWhales(markets, whaleMap) {
+  if (!whaleMap || whaleMap.size === 0) return markets;
+  return markets.map((m) => {
+    const signal = m.conditionId ? whaleMap.get(m.conditionId) : null;
+    if (!signal) {
+      return { ...m, whaleVolume: 0, whaleCount: 0, isSmartMoney: false };
+    }
+    const isSmart =
+      signal.volume >= SMART_MONEY_MIN_USD &&
+      m.probability != null &&
+      m.probability < SMART_MONEY_MAX_PROB;
+    return {
+      ...m,
+      whaleVolume: signal.volume,
+      whaleCount: signal.whaleCount,
+      whaleLastSide: signal.lastSide,
+      whaleHoursAgo: signal.hoursAgo,
+      isSmartMoney: isSmart,
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Annualized return for "smart money" tile. Given an implied probability p
 // and a horizon in days, returns the annualized expected return assuming the
@@ -148,12 +226,13 @@ export const STRATEGIES = {
     sub: 'לוויתנים נגד הקונצנזוס',
     color: 'smart',
     description: 'שווקים שבהם לוויתנים מובילים מחזיקים פוזיציה של מעל $10k בהסתברות מתחת ל-80%.',
+    // Real signal: market must have been flagged by enrichWithWhales(),
+    // which joins live /trades whale data with the /markets payload.
     matches(m) {
-      return m.probability != null && m.probability < SMART_MONEY_MAX_PROB && m.liquidity > 25_000;
+      return m.isSmartMoney === true;
     },
     score(m) {
-      // higher annualized return = higher rank
-      return m.annualized ?? 0;
+      return m.whaleVolume ?? 0;
     },
   },
   consensus: {

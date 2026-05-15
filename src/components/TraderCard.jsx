@@ -47,7 +47,7 @@ export function TraderCard({ trader }) {
             )}
             <bdi className="num">{fmtUsd(trader.pnl)}</bdi>
           </div>
-          <p className="text-[10px] text-text-dim">רווח 7 ימים</p>
+          <p className="text-[10px] text-text-dim">רווח פוזיציות פתוחות</p>
         </div>
       </header>
 
