@@ -18,11 +18,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Numbers, codes, addresses → LTR + monospace even inside RTL paragraphs. */
+/* Numbers, codes, addresses → LTR even inside RTL paragraphs. */
 .num,
 .mono {
   font-family: var(--font-inter), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
   direction: ltr;
   unicode-bidi: isolate;
+}
+
+/* iOS safe-area padding for fixed bottom nav */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
