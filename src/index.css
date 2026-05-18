@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  font-family: 'Heebo', 'Rubik', system-ui, sans-serif;
+  background-color: #0A0A0A;
+  color: #F5F5F5;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #0A0A0A;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* RTL-aware scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A2A2A;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3A3A3A;
+}
+
+/* Smart-money diagonal ribbon — pinned to top-start corner.
+   In RTL the start corner is right; we use logical positioning. */
+.smart-ribbon {
+  position: absolute;
+  top: 0;
+  inset-inline-start: 0;
+  width: 110px;
+  height: 110px;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+.smart-ribbon::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  inset-inline-start: -32px;
+  width: 160px;
+  background: linear-gradient(135deg, #EC4899 0%, #DB2777 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding: 6px 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.35);
+}
+[dir='rtl'] .smart-ribbon::before {
+  transform: rotate(45deg);
+  inset-inline-start: -32px;
+}
+.smart-ribbon[data-label]::before {
+  content: attr(data-label);
+}
+
+/* numeric content kept LTR even inside RTL paragraphs */
+.num {
+  unicode-bidi: isolate;
+  direction: ltr;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* gradient ring on hover for cards */
+.card-hover-ring {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.card-hover-ring:hover {
+  border-color: rgba(0, 214, 126, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 214, 126, 0.08);
+  transform: translateY(-2px);
+}
+
+/* sticky tab strip blur */
+.sticky-blur {
+  backdrop-filter: saturate(140%) blur(12px);
+  -webkit-backdrop-filter: saturate(140%) blur(12px);
+  background-color: rgba(10, 10, 10, 0.85);
+}
+
+/* skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #1A1A1A 0%, #222 50%, #1A1A1A 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
